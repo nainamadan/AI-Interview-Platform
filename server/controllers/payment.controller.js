@@ -111,7 +111,7 @@ export const verifyPaymentController = async (req, res) => {
     }
 
     // 🔥 Step 5: Update payment status
-    payment.paymentId = razorpay_payment_id;
+    payment.razorpayPaymentId = razorpay_payment_id;
     payment.signature = razorpay_signature;
     payment.status = "paid";
     await payment.save();

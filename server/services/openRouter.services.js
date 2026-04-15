@@ -7,7 +7,7 @@ const OPENROUTER_API = "https://openrouter.ai/api/v1/chat/completions";
 // 🔥 main function
 export const askAi = async (messages) => {
   try {
-
+console.log("🔑 API KEY:", process.env.OPENROUTER_API_KEY);
     // ❗ check karo messages array empty ya undefined toh nahi hai
     if (!messages || messages.length === 0) {
       throw new Error("msg array is empty"); 

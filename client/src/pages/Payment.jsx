@@ -22,7 +22,11 @@ const Payment = () => {
       // 🔥 1. create order
       const { data } = await axios.post(
         `${ServerUrl}/api/payment/create-order`,
-        { amount: plan.price },
+        {
+          planId: plan.id || plan.name,
+          amount: plan.price,
+          credit: plan.credits,
+        },
         { withCredentials: true }
       );
 
@@ -41,10 +45,7 @@ const Payment = () => {
           // 🔥 3. verify payment
           const verifyRes = await axios.post(
             `${ServerUrl}/api/payment/verify`,
-            {
-              ...response,
-              credits: plan.credits,
-            },
+            response,
             { withCredentials: true }
           );
 

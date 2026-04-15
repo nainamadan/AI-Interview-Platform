@@ -34,6 +34,10 @@ const paymentSchema = new mongoose.Schema(
       type: String,
     },
 
+    signature: {
+      type: String,
+    },
+
     // 🔥 STATUS
     status: {
       type: String,

@@ -1,16 +1,8 @@
 // multer.js
 import multer from "multer";
 
-// storage config
-const storage = multer.memoryStorage({
-  destination: (req, file, cb) => {
-    cb(null, "public"); // folder where files are stored
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = Date.now() + "-" + file.originalname;
-    cb(null, uniqueName);
-  },
-});
+// storage config — memoryStorage keeps file in memory as Buffer (req.file.buffer)
+const storage = multer.memoryStorage();
 
 // multer instance
 const upload = multer({

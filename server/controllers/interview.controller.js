@@ -125,9 +125,10 @@ Resume:${safeResume}
       }
     ];
 
-    const aiResponse = await askAi(messages);
-
-    console.log("AI Response:", aiResponse); // ✅ debug
+   console.log("🔥 BEFORE AI CALL");
+const aiResponse = await askAi(messages);
+console.log("🔥 AFTER AI CALL:", aiResponse);
+    // console.log("AI Response:", aiResponse); // ✅ debug
 
     if (!aiResponse || typeof aiResponse !== "string") {
       return res.status(500).json({ message: "AI failed" });
@@ -169,6 +170,7 @@ Resume:${safeResume}
     });
 
   } catch (error) {
+    
     console.error("Generate Error:", error);
     return res.status(500).json({
       message: "Server Error",
