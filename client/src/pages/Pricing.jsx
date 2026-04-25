@@ -3,11 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FaArrowLeft, FaCheckCircle } from "react-icons/fa";
 import { ServerUrl } from "../App.jsx";
+import { useDispatch } from "react-redux";
+import { updateCredits } from "../redux/userSlice.js";
+
 const Pricing = () => {
   const navigate = useNavigate();
-const [loadingPlan, setLoadingPlan] = useState(null);
-  // 🔥 selected plan state
-  const [selectedPlan, setSelectedPlan] = useState(1);
+  const dispatch = useDispatch();
+  const [loadingPlan, setLoadingPlan] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState(null);
 
   // 🔥 plans data
   const plans = [
@@ -51,91 +54,114 @@ const [loadingPlan, setLoadingPlan] = useState(null);
       ],
     },
   ];
-const handlePayment = async (plan) => {
-  try {
-    setLoadingPlan(plan.id);
 
-    // 🔥 Step 1: create order from backend
-    const res = await fetch(`${ServerUrl}/api/payment/create-order`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({
-        planId: plan.id,
-        amount: plan.price,
-        credit: plan.credits,
-      }),
-    });
+  const handlePayment = async (plan) => {
+    try {
+      setLoadingPlan(plan.id);
 
-    const data = await res.json();
-    console.log("Order Data:", data);
-
-    if (!data.success) {
-      alert("Order creation failed");
-      setLoadingPlan(null);
-      return;
-    }
-
-    const { order } = data;
-
-    // 🔥 Step 2: Razorpay options
-    const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID, // frontend key
-      amount: order.amount,
-      currency: "INR",
-      name: "AI Interview Platform",
-      description: `${plan.name} - Plan ${plan.id}`,
-      order_id: order.id,
-
-      handler: async function (response) {
-        console.log("Payment Success:", response);
-
-        // 🔥 Step 3: verify payment
-        const verifyRes = await fetch(`${ServerUrl}/api/payment/verify`, {
+      // 🆓 FREE PLAN: no Razorpay, just add credits directly
+      if (plan.price === 0) {
+        const res = await fetch(`${ServerUrl}/api/payment/free-credits`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify(response),
+          body: JSON.stringify({ planId: String(plan.id), credit: plan.credits }),
         });
-
-        const verifyData = await verifyRes.json();
-
-        if (verifyData.success) {
-          alert("Payment Successful 🎉");
+        const data = await res.json();
+        if (data.success) {
+          dispatch(updateCredits(data.credits)); // ✅ update Redux store immediately
+          alert(`Free credits added! Your new balance: ${data.credits} credits 🎉`);
           navigate("/");
         } else {
-          alert("Verification Failed ❌");
+          alert(data.message || "Failed to add free credits");
         }
-      },
+        setLoadingPlan(null);
+        return;
+      }
 
-      theme: {
-        color: "#10b981", // green theme
-      },
-    };
+      // 🔥 PAID PLAN: Step 1 — create Razorpay order
+      const res = await fetch(`${ServerUrl}/api/payment/create-order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          planId: String(plan.id),
+          amount: plan.price,
+          credit: plan.credits,
+        }),
+      });
 
-    // 🔥 Step 4: open Razorpay
-    const razor = new window.Razorpay(options);
-    razor.open();
+      const data = await res.json();
+      console.log("Order Data:", data);
 
-  } catch (error) {
-    console.error("Payment Error:", error);
-  } finally {
-    setLoadingPlan(null);
-  }
-};
+      if (!data.success) {
+        alert(data.message || "Order creation failed. Please try again.");
+        setLoadingPlan(null);
+        return;
+      }
+
+      const { order } = data;
+
+      // 🔥 Step 2: open Razorpay popup
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: "INR",
+        name: "InterviewIQ.AI",
+        description: `${plan.name} — ${plan.credits} Credits`,
+        order_id: order.id,
+
+        handler: async function (response) {
+          console.log("Razorpay Success:", response);
+
+          // 🔥 Step 3: verify on backend
+          const verifyRes = await fetch(`${ServerUrl}/api/payment/verify`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(response),
+          });
+
+          const verifyData = await verifyRes.json();
+
+          if (verifyData.success) {
+            dispatch(updateCredits(verifyData.credits)); // ✅ update Redux store immediately
+            alert(`Payment Successful 🎉 Your credits have been added!`);
+            navigate("/");
+          } else {
+            alert(verifyData.message || "Payment verification failed ❌");
+          }
+          setLoadingPlan(null);
+        },
+
+        modal: {
+          // reset loading if user closes modal
+          ondismiss: () => setLoadingPlan(null),
+        },
+
+        theme: { color: "#10b981" },
+      };
+
+      const razor = new window.Razorpay(options);
+      razor.open();
+
+    } catch (error) {
+      console.error("Payment Error:", error);
+      alert("Something went wrong. Please try again.");
+      setLoadingPlan(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-100 to-gray-100 px-4 py-8">
-      
+
       {/* 🔙 BACK BUTTON */}
       <button
         onClick={() => navigate("/")}
         className="mb-6 flex items-center gap-2 text-gray-700 hover:text-black"
       >
         <FaArrowLeft />
+        <span className="text-sm font-medium">Back</span>
       </button>
 
       {/* 🔥 HEADER */}
@@ -150,17 +176,17 @@ const handlePayment = async (plan) => {
 
       {/* 🔥 PLANS */}
       <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-
         {plans.map((plan) => {
           const isSelected = selectedPlan === plan.id;
+          const isLoading = loadingPlan === plan.id;
 
           return (
             <motion.div
               key={plan.id}
               onClick={() => setSelectedPlan(plan.id)}
-              whileHover={{ scale: 1.05 }}
-              className={`cursor-pointer rounded-2xl p-6 shadow-md transition border
-                ${isSelected ? "border-green-500 bg-white" : "bg-white"}
+              whileHover={{ scale: 1.03 }}
+              className={`cursor-pointer rounded-2xl p-6 shadow-md transition border-2
+                ${isSelected ? "border-green-500 bg-white" : "border-transparent bg-white"}
               `}
             >
               {/* PLAN NAME */}
@@ -172,11 +198,16 @@ const handlePayment = async (plan) => {
                     Best Value
                   </span>
                 )}
+                {plan.price === 0 && (
+                  <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded-full">
+                    Free
+                  </span>
+                )}
               </div>
 
               {/* PRICE */}
               <p className="text-2xl font-bold text-green-600">
-                ₹{plan.price}
+                {plan.price === 0 ? "Free" : `₹${plan.price}`}
               </p>
 
               <p className="text-sm text-gray-500 mb-3">
@@ -189,43 +220,36 @@ const handlePayment = async (plan) => {
               </p>
 
               {/* FEATURES */}
-              <div className="space-y-2 mb-4">
+              <div className="space-y-2 mb-6">
                 {plan.features.map((feature, index) => (
                   <div key={index} className="flex items-center gap-2 text-sm">
-                    <FaCheckCircle className="text-green-500" />
+                    <FaCheckCircle className="text-green-500 shrink-0" />
                     <span>{feature}</span>
                   </div>
                 ))}
               </div>
 
-              {/* SELECT BUTTON */}
-       <button
-  onClick={(e) => {
-    e.stopPropagation();
-
-    if (!isSelected) {
-      setSelectedPlan(plan.id);
-    } else {
-      handlePayment(plan);
-    }
-  }}
-  disabled={loadingPlan === plan.id}
-  className={`w-full py-2 rounded-lg font-medium transition
-    ${
-      loadingPlan === plan.id
-        ? "bg-gray-400 text-white cursor-not-allowed"
-        : isSelected
-        ? "bg-green-500 text-white hover:bg-green-600"
-        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-    }
-  `}
->
-  {loadingPlan === plan.id
-    ? "Processing..."
-    : isSelected
-    ? "Proceed to Pay"
-    : "Select Plan"}
-</button>
+              {/* CTA BUTTON — always triggers payment directly, no double-click */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePayment(plan);
+                }}
+                disabled={isLoading}
+                className={`w-full py-2 rounded-lg font-medium transition
+                  ${
+                    isLoading
+                      ? "bg-gray-400 text-white cursor-not-allowed"
+                      : "bg-green-500 text-white hover:bg-green-600 active:scale-95"
+                  }
+                `}
+              >
+                {isLoading
+                  ? "Processing..."
+                  : plan.price === 0
+                  ? "Get Free Credits"
+                  : "Buy Now 💳"}
+              </button>
             </motion.div>
           );
         })}

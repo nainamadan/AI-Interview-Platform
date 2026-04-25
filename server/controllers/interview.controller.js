@@ -63,8 +63,6 @@ export const analyzeResume = async (req, res) => {
 };
 
 
-
-
 export const generateQuestions = async (req, res) => {
   try {
     let { role, experience, mode, resumeText, projects, skills } = req.body;

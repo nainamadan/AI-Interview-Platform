@@ -16,8 +16,8 @@ export const createOrder = async (req, res) => {
   try {
     const { planId, amount, credit } = req.body;
 
-    // ❌ Validate plan data
-    if (!planId || !amount || !credit) {
+    // ✅ Validate plan data (amount can be 0 for free plan)
+    if (!planId || amount === undefined || amount === null || !credit) {
       return res.status(400).json({
         success: false,
         message: "Invalid plan data",
@@ -36,10 +36,10 @@ export const createOrder = async (req, res) => {
 
     // 💾 Save payment in DB
     const payment = await Payment.create({
-       userId: req.user.id, 
+      userId: req.user._id,
       planId,
       amount,
-     credits: credit,  
+      credits: credit,
       razorpayOrderId: order.id,
       status: "created",
     });
@@ -117,7 +117,11 @@ export const verifyPaymentController = async (req, res) => {
     await payment.save();
 
     // 🔥 Step 6: Add credits to user
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id || req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
 
     user.credits += payment.credits; // ✅ use DB value
     await user.save();
@@ -135,5 +139,43 @@ export const verifyPaymentController = async (req, res) => {
       success: false,
       message: "Verification error",
     });
+  }
+};
+
+// 🆓 FREE PLAN: add credits without any payment
+export const freeCreditsController = async (req, res) => {
+  try {
+    const { planId, credit } = req.body;
+
+    if (!planId || !credit) {
+      return res.status(400).json({ success: false, message: "Invalid plan data" });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // 💾 Log the free redemption
+    await Payment.create({
+      userId: req.user._id,
+      planId: String(planId),
+      amount: 0,
+      credits: credit,
+      status: "paid",
+    });
+
+    // ✅ Add credits
+    user.credits += credit;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Free credits added successfully",
+      credits: user.credits,
+    });
+  } catch (error) {
+    console.error("Free Credits Error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
