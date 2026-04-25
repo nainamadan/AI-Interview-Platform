@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import * as faceapi from "face-api.js";
+// import * as faceapi from "face-api.js";
+
+let faceapi;
 import Timer from "./Timer";
 import { motion, AnimatePresence } from "framer-motion";
 import femalevoice from "../assets/female-ai.mp4";
@@ -75,6 +77,23 @@ const Step2Interview = ({ interviewData, onFinish }) => {
     isListeningRef.current = false;
     setIsListening(false);
     setInterimText("");
+  }, []);
+
+  // ✅ FIXED face-api loading
+  useEffect(() => {
+    const loadModels = async () => {
+      try {
+        const module = await import("face-api.js");
+        faceapi = module;
+
+        await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+        setModelsLoaded(true);
+      } catch (e) {
+        console.warn("Face model load failed:", e.message);
+      }
+    };
+
+    loadModels();
   }, []);
 
   // ─────────────────────────────────────────────────────────────
