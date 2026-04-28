@@ -221,12 +221,12 @@ const Step2Interview = ({ interviewData, onFinish }) => {
   // ─────────────────────────────────────────────────────────────
   // LOAD FACE DETECTION MODELS
   // ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    faceapi.nets.tinyFaceDetector
-      .loadFromUri(MODEL_URL)
-      .then(() => setModelsLoaded(true))
-      .catch((e) => console.warn("Face model load failed:", e.message));
-  }, []);
+  // useEffect(() => {
+  //   faceapi.nets.tinyFaceDetector
+  //     .loadFromUri(MODEL_URL)
+  //     .then(() => setModelsLoaded(true))
+  //     .catch((e) => console.warn("Face model load failed:", e.message));
+  // }, []);
 
   // ─────────────────────────────────────────────────────────────
   // CAMERA + MIC ON MOUNT
