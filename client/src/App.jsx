@@ -11,7 +11,7 @@ import Pricing from "./pages/Pricing.jsx"
 import InterviewHistory from './pages/InterviewHistory.jsx';
 import InterviewReport from "./pages/InterviewReport.jsx"
  import Payment from "./pages/Payment.jsx";
-export const ServerUrl = import.meta.env.VITE_SERVER_URL || "http://localhost:5000"
+export const ServerUrl = import.meta.env.VITE_SERVER_URL || "https://ai-interview-platform-d199.onrender.com"
 
 
 const App = () => {
