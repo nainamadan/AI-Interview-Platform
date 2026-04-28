@@ -20,7 +20,7 @@ const dispatch=useDispatch();
 // const [user, setUser] = useState(null);
 
 //   // 🔐 get current user
-  useEffect(() => {
+  useEffect(() => { 
     const getUser = async () => {
       try {
         const res = await axios.get(

@@ -22,15 +22,12 @@ console.log("BODY:", req.body); // 👈 ADD THIS
     const token = await generateToken(user._id);
 
     // store token in cookie
-    res.cookie("token", token, {
-      // https true means app in development
-      httpOnly: true,
-      // loal host pe run krna h
-      secure: false, // true in production (HTTPS)
-      sameSite: "strict",
-      // 7 days in millisecond
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+   res.cookie("token", token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production", // 👈 production me true
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict", // 👈 cross-site ke liye none
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+});
 
     // send response
     return res.status(200).json({
@@ -51,10 +48,12 @@ console.log("BODY:", req.body); // 👈 ADD THIS
 
 export const logoutUser = (req, res) => {
   try {
-    res.cookie("token", "", {
-      httpOnly: true,
-      expires: new Date(0), // expire immediately
-    });
+   res.cookie("token", "", {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+  expires: new Date(0),
+});
 
     res.status(200).json({
       success: true,
